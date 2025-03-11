@@ -12,9 +12,6 @@ Ce projet vise à développer un programme capable de lire un tableau de contrai
 - Calcul des marges et des chemins critiques
 - Affichage des résultats sous forme lisible (matrices, listes, etc.)
 
-## Technologies
-Le projet peut être implémenté en **C, C++, Python ou Java**. Chaque membre de l'équipe doit maîtriser le langage choisi.
-
 ## Utilisation
 1. Placez un fichier `.txt` contenant le tableau de contraintes dans le dossier du projet.
 2. Lancez le programme et suivez les instructions affichées.
