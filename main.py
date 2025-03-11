@@ -63,6 +63,8 @@ def display_graph(constrain_table):
                 row.append(f"{graph[i, j]:>3}")
         print(f"{headers[i]:>3} " + " ".join(row))
 
+    return graph
+
 # Import de la table test pour création du fichier mémoire test
 constrain_table = "contraintes/tabletest.txt"
 constrain_table_reader(constrain_table)
