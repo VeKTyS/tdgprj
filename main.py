@@ -35,7 +35,7 @@ def constrain_table_reader(constrain_table):
     return table
 
 def get_successors(tasks, constraints):
-    """ Retourne un dictionnaire des successeurs de chaque tâche """
+    # Retourne un dictionnaire des successeurs de chaque tâche
     successors = {task: [] for task in tasks}
 
     for i, task in enumerate(tasks):  
@@ -44,6 +44,17 @@ def get_successors(tasks, constraints):
                 successors[constrained_task].append(task)
 
     return successors
+
+def get_predecessors(tasks, constraints):
+    # Retourne un dictionnaire des prédécesseurs de chaque tâche
+    predecessors = {task: [] for task in tasks}
+
+    for i, task in enumerate(tasks):  
+        for constrained_task in constraints[i]:  # Chaque tâche dont i dépend
+            if constrained_task in tasks:
+                predecessors[task].append(constrained_task)
+
+    return predecessors
 
 def display_graph(constrain_table):
     table = constrain_table_reader(constrain_table)
@@ -83,6 +94,11 @@ def display_graph(constrain_table):
     print("\nSuccesseurs des tâches :")
     for task, succ in successors.items():
         print(f"Tâche {task}: {', '.join(succ) if succ else 'Aucun successeur'}")    
+
+    predecessors = get_predecessors(tasks, constraints)
+    print("\nPrédécesseurs des tâches :")
+    for task, pred in predecessors.items():
+        print(f"Tâche {task}: {', '.join(pred) if pred else 'Aucun prédécesseur'}")
 
     return graph
 
