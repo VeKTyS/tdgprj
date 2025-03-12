@@ -74,18 +74,13 @@ def display_graph(constrain_table):
     table = constrain_table_reader(constrain_table)
     tasks, durations, constraints = table
     N = len(tasks) # Nombre de tâches 
-    graph = np.zeros((N + 2, N + 2), dtype=int)
+    graph = np.full((N + 2, N + 2), '*', dtype=object) # Matrice de valeurs
     
     for i, task in enumerate(tasks):  
         for constrained_task in constraints[i]:  # Chaque tâche dont i dépend
             if constrained_task in tasks:
                 constrained_index = tasks.index(constrained_task)  # Trouver son index
                 graph[i, constrained_index] = int(durations[constrained_index])  # Associer la bonne durée
-    
-    # Ajout des nœuds fictifs 0 et N+1
-    for i in range(1, N + 1):
-        graph[i, 0] = 0
-        graph[N + 1, i] = 0
 
     # Transpose the graph matrix
     graph = graph.T
@@ -99,10 +94,7 @@ def display_graph(constrain_table):
     for i in range(N):
         row = []
         for j in range(N):
-            if graph[i, j] == 0 and i != 0 and j != N + 1:
-                row.append("  *")
-            else:
-                row.append(f"{graph[i, j]:>3}")
+            row.append(f"{graph[i, j]:>3}")
         print(f"{headers[i]:>3} " + " ".join(row))
 
     successors = get_successors(tasks, constraints)
