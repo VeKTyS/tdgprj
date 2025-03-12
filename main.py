@@ -70,6 +70,36 @@ def get_predecessors(tasks, constraints):
 
     return predecessors
 
+def has_no_cycles(graph):
+    # Vérifie s'il y a des cycles dans le graphe
+    def visit(node):
+        if node in temp_mark:
+            return False
+        if node not in perm_mark:
+            temp_mark.add(node)
+            for successor in graph[node]:
+                if not visit(successor):
+                    return False
+            temp_mark.remove(node)
+            perm_mark.add(node)
+        return True
+
+    temp_mark = set()
+    perm_mark = set()
+    for node in graph:
+        if node not in perm_mark:
+            if not visit(node):
+                return False
+    return True
+
+def has_no_negative_arcs(graph):
+    # Vérifie s'il y a des arcs à valeur négative dans le graphe
+    for row in graph:
+        for value in row:
+            if isinstance(value, int) and value < 0:
+                return False
+    return True
+
 def display_graph(constrain_table):
     table = constrain_table_reader(constrain_table)
     tasks, durations, constraints = table
@@ -86,7 +116,6 @@ def display_graph(constrain_table):
     graph = graph.T
 
     # Création des en-têtes
-    #headers = ['0'] + [chr(65 + i) for i in range(N)] + [str(N + 1)]
     headers = ['0'] + [chr(65 + i) for i in range(N-2)] + [str(N-1)]
 
     # Affichage des en-têtes avec alignement
@@ -106,6 +135,23 @@ def display_graph(constrain_table):
     print("\nPrédécesseurs des tâches :")
     for task, pred in predecessors.items():
         print(f"Tâche {task}: {', '.join(pred) if pred else 'Aucun prédécesseur'}")
+
+    # Vérification des propriétés du graphe
+    graph_dict = {task: successors[task] for task in tasks}
+    if has_no_cycles(graph_dict) and has_no_negative_arcs(graph):
+        print("\nLe graphe ne contient pas de cycles.")
+        print("Le graphe ne contient pas d'arcs à valeur négative.")
+        print("-> C'est un graphe d'ordonnancement\n")
+    else:
+        if not has_no_cycles(graph_dict):
+            print("\nLe graphe contient des cycles.")
+        else:
+            print("Le graphe ne contient pas de cycles.")
+        if not has_no_negative_arcs(graph):
+            print("Le graphe contient des arcs à valeur négative.")
+        else:
+            print("Le graphe ne contient pas d'arcs à valeur négative.")
+        print("-> Ce n'est pas un graphe d'ordonnancement\n")
 
     return graph
 
