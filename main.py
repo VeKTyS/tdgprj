@@ -162,3 +162,51 @@ constrain_table_reader(constrain_table)
 # Display graphe table test en mémoire
 print("Graph matrix:")
 display_graph("memoire/tabletest.txt")
+
+def earliest_dates(tasks, durations, constraints):
+    earliest = {task: 0 for task in tasks}  # Initialisation des dates au plus tôt
+    
+    for i, task in enumerate(tasks):
+        for pred in constraints[i]:
+            if pred in tasks:
+                pred_index = tasks.index(pred)  # Trouver l'index de la tâche prédécesseur
+                earliest[task] = max(earliest[task], earliest[pred] + int(durations[pred_index]))
+    
+    return earliest
+
+def latest_dates(tasks, durations, constraints, project_end):
+    latest = {task: project_end for task in tasks}  # Initialisation des dates au plus tard
+    
+    for task in reversed(tasks):
+        successors = [t for t, preds in zip(tasks, constraints) if task in preds]
+        if successors:
+            latest[task] = min(latest[t] - int(durations[tasks.index(task)]) for t in successors)
+    
+    return latest
+
+def compute_margins(earliest, latest):
+    return {task: latest[task] - earliest[task] for task in earliest}
+
+def critical_paths(margins):
+    return [task for task, margin in margins.items() if margin == 0]
+
+def analyze_schedule(constrain_table):
+    table = constrain_table_reader(constrain_table)
+    tasks, durations, constraints = table
+    
+    earliest = earliest_dates(tasks, durations, constraints)
+    project_end = max(earliest.values())
+    latest = latest_dates(tasks, durations, constraints, project_end)
+    margins = compute_margins(earliest, latest)
+    critical_path = critical_paths(margins)
+    
+    print("\nDates au plus tôt :", earliest)
+    print("Dates au plus tard :", latest)
+    print("Marges :", margins)
+    print("Chemin(s) critique(s) :", critical_path)
+    
+    return earliest, latest, margins, critical_path
+
+# Exemple d'utilisation
+constrain_table = "memoire/tabletest.txt"
+analyze_schedule(constrain_table)
