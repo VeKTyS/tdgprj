@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import ast
 import numpy as np
 from tabulate import tabulate
@@ -48,6 +49,7 @@ def constrain_table_reader(constrain_table):
         f.write(str(table))
     
     return table
+
 
 def get_successors(tasks, constraints):
     # Retourne un dictionnaire des successeurs de chaque tâche
@@ -100,6 +102,7 @@ def has_no_negative_arcs(graph):
             if isinstance(value, int) and value < 0:  # Vérifie uniquement les entiers
                 return False
     return True
+    
 
 
 def earliest_dates(tasks, durations, constraints):
@@ -128,8 +131,7 @@ def compute_margins(earliest, latest):
 
 def critical_paths(margins):
     return [task for task, margin in margins.items() if margin == 0]
-
-def analyze_schedule(constrain_table):
+def analyze_schedule(constrain_table, trace_content):
     table = constrain_table_reader(constrain_table)
     tasks, durations, constraints = table
     
@@ -174,9 +176,9 @@ def analyze_schedule(constrain_table):
         ["Rang"] + [ranks[task] for task in tasks]
     ]
     
-    # Affichage des résultats sous forme de tableau horizontal
-    print("\nAnalyse de l'ordonnancement :")
-    print(tabulate(schedule_data, headers=headers, tablefmt="grid"))
+    # Ajouter les résultats à la trace
+    trace_content += "\nAnalyse de l'ordonnancement :\n"
+    trace_content += tabulate(schedule_data, headers=headers, tablefmt="grid") + "\n"
     
     # Trouver les chemins critiques complets
     def find_critical_paths(task, path, critical_path_tasks, successors):
@@ -195,73 +197,97 @@ def analyze_schedule(constrain_table):
         if task in critical_path_tasks and not predecessors[task]:  # Tâches de départ critiques
             critical_paths_list.extend(find_critical_paths(task, [], critical_path_tasks, successors))
     
-    # Affichage des chemins critiques
-    print("\nChemins critiques :")
+    # Ajouter les chemins critiques à la trace
+    trace_content += "\nChemins critiques :\n"
     for path in critical_paths_list:
-        print(" -> ".join(path))
+        trace_content += " -> ".join(path) + "\n"
     
-    return earliest, latest, margins, critical_paths_list, ranks
+    return earliest, latest, margins, critical_paths_list, ranks, trace_content
+
+def create_execution_trace(constrain_table, trace_content):
+
+    trace_dir = "trace"
+    if not os.path.exists(trace_dir):
+        os.makedirs(trace_dir)
+
+    # Nom du fichier de trace basé sur le fichier d'entrée
+    base_name = os.path.basename(constrain_table)
+    trace_file = os.path.join(trace_dir, f"trace_{base_name}")
+
+    # Ajouter un horodatage au début de la trace
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    trace_header = f"Trace d'exécution - {timestamp}\n"
+    trace_header += "=" * 50 + "\n"
+
+    # Écrire la trace dans le fichier
+    with open(trace_file, "w", encoding="utf-8") as f:
+        f.write(trace_header)
+        f.write(trace_content)
+
+    # Afficher la trace dans la console
+    print(trace_header + trace_content)
+
+    print(f"\nTrace d'exécution enregistrée dans : {trace_file}")
 
 def display_graph(constrain_table):
+    trace_content = ""  # Variable pour stocker la trace
     table = constrain_table_reader(constrain_table)
     tasks, durations, constraints = table
-    N = len(tasks) # Nombre de tâches 
-    graph = np.full((N + 2, N + 2), '*', dtype=object) # Matrice de valeurs
-    
-    for i, task in enumerate(tasks):  
+    N = len(tasks)  # Nombre de tâches
+    graph = np.full((N + 2, N + 2), '*', dtype=object)  # Matrice de valeurs initialisée
+
+    # Remplir la matrice du graphe
+    for i, task in enumerate(tasks):
         for constrained_task in constraints[i]:  # Chaque tâche dont i dépend
             if constrained_task in tasks:
                 constrained_index = tasks.index(constrained_task)  # Trouver son index
                 graph[i, constrained_index] = int(durations[constrained_index])  # Associer la bonne durée
 
-    # Transpose the graph matrix
+    # Transposer la matrice pour inverser les colonnes et les lignes
     graph = graph.T
 
     # Création des en-têtes
-    headers = ['0'] + [chr(65 + i) for i in range(N-2)] + [str(N-1)]
+    headers = ['0'] + [chr(65 + i) for i in range(N - 2)] + [str(N - 1)]
 
     # Affichage des en-têtes avec alignement
-    print("    " + " ".join(f"{h:>3}" for h in headers))
+    trace_content += "    " + " ".join(f"{h:>3}" for h in headers) + "\n"
     for i in range(N):
         row = []
         for j in range(N):
             row.append(f"{graph[i, j]:>3}")
-        print(f"{headers[i]:>3} " + " ".join(row))
+        trace_content += f"{headers[i]:>3} " + " ".join(row) + "\n"
 
+    # Ajouter les successeurs et prédécesseurs à la trace
     successors = get_successors(tasks, constraints)
-    #print("\nSuccesseurs des tâches :")
-    #for task, succ in successors.items():
-        #print(f"Tâche {task}: {', '.join(succ) if succ else 'Aucun successeur'}")    
-
     predecessors = get_predecessors(tasks, constraints)
-    #print("\nPrédécesseurs des tâches :")
-    #for task, pred in predecessors.items():
-        #print(f"Tâche {task}: {', '.join(pred) if pred else 'Aucun prédécesseur'}")
 
     # Vérification des propriétés du graphe
     graph_dict = {task: successors[task] for task in tasks}
     if has_no_cycles(graph_dict) and has_no_negative_arcs(graph):
-        print("\nLe graphe ne contient pas de cycles.")
-        print("Le graphe ne contient pas d'arcs à valeur négative.")
-        print("-> C'est un graphe d'ordonnancement\n")
-        analyze_schedule(constrain_table)
+        trace_content += "\nLe graphe ne contient pas de cycles.\n"
+        trace_content += "Le graphe ne contient pas d'arcs à valeur négative.\n"
+        trace_content += "-> C'est un graphe d'ordonnancement\n"
+        _, _, _, _, _, trace_content = analyze_schedule(constrain_table, trace_content)
     else:
         if not has_no_cycles(graph_dict):
-            print("\nLe graphe contient des cycles.")
+            trace_content += "\nLe graphe contient des cycles.\n"
         else:
-            print("Le graphe ne contient pas de cycles.")
+            trace_content += "Le graphe ne contient pas de cycles.\n"
         if not has_no_negative_arcs(graph):
-            print("Le graphe contient des arcs à valeur négative.")
+            trace_content += "Le graphe contient des arcs à valeur négative.\n"
         else:
-            print("Le graphe ne contient pas d'arcs à valeur négative.")
-        print("-> Ce n'est pas un graphe d'ordonnancement\n")
+            trace_content += "Le graphe ne contient pas d'arcs à valeur négative.\n"
+        trace_content += "-> Ce n'est pas un graphe d'ordonnancement\n"
+
+    # Enregistrer la trace
+    create_execution_trace(constrain_table, trace_content)
 
     return graph
 
 # Import de la table test pour création du fichier mémoire test
-constrain_table = "contraintes/table 2.txt"
+constrain_table = "contraintes/table 10.txt"
 constrain_table_reader(constrain_table)
 
 # Display graphe table test en mémoire
 print("Graph matrix:")
-display_graph("memoire/table 2.txt")
+display_graph("memoire/table 10.txt")
